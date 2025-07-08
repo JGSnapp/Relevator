@@ -1,0 +1,13 @@
+version: '3.8'
+
+services:
+  relevator-server:
+    build: ./server
+    ports:
+      - "8000:8000"
+    environment:
+      - PROXY_API_KEY=${PROXY_API_KEY}
+      - PROXY_BASE_URL=${PROXY_BASE_URL}
+    volumes:
+      - ./server:/app
+    restart: unless-stopped 
