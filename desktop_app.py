@@ -575,26 +575,55 @@ class RelevatorPanel:
         
         # Контент блока
         if content:
-            # Парсим HTML контент
-            parsed_content = self.parse_html_content(content)
-            
-            # Создаем текстовое поле для контента
-            content_text = ctk.CTkTextbox(block_frame, 
-                                         height=80,
-                                         font=ctk.CTkFont(size=12),
-                                         corner_radius=6,
-                                         fg_color=("#333333", "#222222"),
-                                         text_color=("#ffffff", "#ffffff"))
-            content_text.pack(fill=tk.X, padx=12, pady=(8, 12))
-            
-            # Настройка тегов для форматирования
-            content_text.tag_config("subtitle", foreground="#2196F3", font=ctk.CTkFont(size=12, weight="bold"))
-            content_text.tag_config("important", foreground="#FF9800", font=ctk.CTkFont(size=12, weight="bold"))
-            content_text.tag_config("code", foreground="#E91E63", font=ctk.CTkFont(size=11, family="Consolas"))
-            content_text.tag_config("emphasis", foreground="#9C27B0", font=ctk.CTkFont(size=12, slant="italic"))
-            
-            # Вставляем форматированный текст
-            self.insert_formatted_text_to_widget(content_text, parsed_content)
+            # Преобразуем HTML в читаемый плоский текст с переносами и маркерами
+            display_text = self.html_to_display_text(content)
+
+            # Отображаем простой, всегда видимый текст (без редактирования)
+            content_label = ctk.CTkLabel(
+                block_frame,
+                text=display_text,
+                font=ctk.CTkFont(size=12),
+                justify=tk.LEFT,
+                anchor="w",
+                wraplength=280,
+            )
+            content_label.pack(fill=tk.X, padx=12, pady=(8, 12))
+
+    def html_to_display_text(self, html_content: str) -> str:
+        """Грубое преобразование HTML-подобного содержимого в читаемый текст.
+        Сохраняем переносы строк и маркеры списков, убираем декоративные теги."""
+        text = html_content or ""
+        # Переносы
+        text = text.replace("<br>", "\n").replace("<br/>", "\n").replace("<br />", "\n")
+        # Списки
+        text = text.replace("<ul>", "\n").replace("</ul>", "\n")
+        text = text.replace("<li>", "• ").replace("</li>", "\n")
+        # Заголовки и выделения — просто убираем теги
+        replacements = [
+            ("<h3>", ""), ("</h3>", ""),
+            ("<strong>", ""), ("</strong>", ""),
+            ("<em>", ""), ("</em>", ""),
+            ("<code>", ""), ("</code>", ""),
+            ("<p>", ""), ("</p>", "\n"),
+        ]
+        for src, dst in replacements:
+            text = text.replace(src, dst)
+        # Убираем любые оставшиеся угловые теги простой заменой
+        # (избегаем regex, чтобы не тянуть зависимости)
+        while "<" in text and ">" in text:
+            start = text.find("<")
+            end = text.find(">", start)
+            if end == -1:
+                break
+            text = text[:start] + text[end+1:]
+        # Нормализуем пустые строки
+        lines = [ln.rstrip() for ln in text.splitlines()]
+        # Удаляем ведущие/замыкающие пустые строки
+        while lines and not lines[0]:
+            lines.pop(0)
+        while lines and not lines[-1]:
+            lines.pop()
+        return "\n".join(lines)
     
     def insert_formatted_text_to_widget(self, text_widget, text):
         """Вставка текста с форматированием в указанный виджет"""
